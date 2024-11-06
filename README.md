@@ -76,12 +76,12 @@ You may wish to only access individual environments used in the Metaworld benchm
 
 ### Seeding a Benchmark Instance
 For the purposes of reproducibility, it may be important to you to seed your benchmark instance.
-For example, for the ML1 benchmark environment with the 'pick-place-v2' environment, you can do so in the following way:
+For example, for the ML1 benchmark environment with the 'pick-place-V3' environment, you can do so in the following way:
 ```python
 import metaworld
 
 SEED = 0  # some seed number here
-benchmark = metaworld.ML1('pick-place-v2', seed=SEED)
+benchmark = metaworld.ML1('pick-place-V3', seed=SEED)
 ```
 
 ### Running ML1 or MT1
@@ -91,9 +91,9 @@ import random
 
 print(metaworld.ML1.ENV_NAMES)  # Check out the available environments
 
-ml1 = metaworld.ML1('pick-place-v2') # Construct the benchmark, sampling tasks
+ml1 = metaworld.ML1('pick-place-V3') # Construct the benchmark, sampling tasks
 
-env = ml1.train_classes['pick-place-v2']()  # Create an environment with task `pick_place`
+env = ml1.train_classes['pick-place-V3']()  # Create an environment with task `pick_place`
 task = random.choice(ml1.train_tasks)
 env.set_task(task)  # Set task
 
@@ -152,15 +152,15 @@ environments respectively.
 
 You can access them in the following way:
 ```python
-from metaworld.envs import (ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE,
-                            ALL_V2_ENVIRONMENTS_GOAL_HIDDEN)
+from metaworld.envs import (ALL_V3_ENVIRONMENTS_GOAL_OBSERVABLE,
+                            ALL_V3_ENVIRONMENTS_GOAL_HIDDEN)
                             # these are ordered dicts where the key : value
                             # is env_name : env_constructor
 
 import numpy as np
 
-door_open_goal_observable_cls = ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE["door-open-v2-goal-observable"]
-door_open_goal_hidden_cls = ALL_V2_ENVIRONMENTS_GOAL_HIDDEN["door-open-v2-goal-hidden"]
+door_open_goal_observable_cls = ALL_V3_ENVIRONMENTS_GOAL_OBSERVABLE["door-open-V3-goal-observable"]
+door_open_goal_hidden_cls = ALL_V3_ENVIRONMENTS_GOAL_HIDDEN["door-open-V3-goal-hidden"]
 
 env = door_open_goal_hidden_cls()
 env.reset()  # Reset environment
@@ -171,15 +171,15 @@ assert (obs[-3:] == np.zeros(3)).all() # goal will be zeroed out because env is 
 # You can choose to initialize the random seed of the environment.
 # The state of your rng will remain unaffected after the environment is constructed.
 env1 = door_open_goal_observable_cls(seed=5)
-env2 = door_open_goal_observable_cls(seed=5)
+enV3 = door_open_goal_observable_cls(seed=5)
 
 env1.reset()  # Reset environment
-env2.reset()
+enV3.reset()
 a1 = env1.action_space.sample()  # Sample an action
-a2 = env2.action_space.sample()
+a2 = enV3.action_space.sample()
 next_obs1, _, _, _ = env1.step(a1)  # Step the environment with the sampled random action
 
-next_obs2, _, _, _ = env2.step(a2)
+next_obs2, _, _, _ = enV3.step(a2)
 assert (next_obs1[-3:] == next_obs2[-3:]).all() # 2 envs initialized with the same seed will have the same goal
 assert not (next_obs2[-3:] == np.zeros(3)).all()   # The env's are goal observable, meaning the goal is not zero'd out
 

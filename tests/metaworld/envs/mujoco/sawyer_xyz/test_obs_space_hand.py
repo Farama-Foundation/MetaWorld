@@ -1,10 +1,10 @@
 import numpy as np
 import pytest
 
-from metaworld.envs.mujoco.env_dict import ALL_V2_ENVIRONMENTS
-from metaworld.envs.mujoco.sawyer_xyz import SawyerXYZEnv
+from metaworld.env_dict import ALL_V3_ENVIRONMENTS
 from metaworld.policies.action import Action
 from metaworld.policies.policy import Policy, move
+from metaworld.sawyer_xyz_env import SawyerXYZEnv
 
 
 class SawyerRandomReachPolicy(Policy):
@@ -43,7 +43,7 @@ def sample_spherical(num_points, radius=1.0):
 
 @pytest.mark.parametrize("target", sample_spherical(100, 10.0))
 def test_reaching_limit(target):
-    env = ALL_V2_ENVIRONMENTS["reach-v2"]()
+    env = ALL_V3_ENVIRONMENTS["reach-v3"]()
     env._partially_observable = False
     env._freeze_rand_vec = False
     env._set_task_called = True
