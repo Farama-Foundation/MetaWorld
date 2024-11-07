@@ -16,7 +16,7 @@ COPY . /usr/local/metaworld/
 WORKDIR /usr/local/metaworld/
 RUN free -g
 RUN pip install .[testing]
-RUN git clone https://github.com/reginald-mclean/Gymnasium.git
+RUN git clone https://github.com/Farama-Foundation/Gymnasium.git
 RUN pip install -e Gymnasium
 
 
