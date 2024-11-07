@@ -4,14 +4,14 @@ import time
 import numpy as np
 
 import metaworld
-from metaworld.policies.sawyer_door_lock_v2_policy import (
-    SawyerDoorLockV2Policy as policy,
+from metaworld.policies.sawyer_door_lock_v3_policy import (
+    SawyerDoorLockV3Policy as policy,
 )
 
 np.set_printoptions(suppress=True)
 
 seed = 42
-env_name = "door-lock-v2"
+env_name = "door-lock-V3"
 
 random.seed(seed)
 ml1 = metaworld.MT50(seed=seed)

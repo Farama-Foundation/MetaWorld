@@ -1,226 +1,172 @@
-# Meta-World
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Farama-Foundation/metaworld/blob/master/LICENSE)
-![Build Status](https://github.com/Farama-Foundation/Metaworld/workflows/MetaWorld%20CI/badge.svg)
+[![Python](https://img.shields.io/pypi/pyversions/metaworld.svg)](https://badge.fury.io/py/metaworld)
+[![PyPI](https://badge.fury.io/py/metaworld.svg)](https://badge.fury.io/py/metaworld.svg)
+[![arXiv](https://img.shields.io/badge/arXiv-1910.10897-b31b1b.svg)](https://arxiv.org/pdf/1910.10897)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://pre-commit.com/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-# The current version of Meta-World is a work in progress. If you find any bugs/errors please open an issue.
+<p align="center">
+    <img src="https://github.com/reginald-mclean/Metaworld/blob/newReadMe/metaworld-text-banner.svg" width="500px"/>
+</p>
 
-__Meta-World is an open-source simulated benchmark for meta-reinforcement learning and multi-task learning consisting of 50 distinct robotic manipulation tasks.__ We aim to provide task distributions that are sufficiently broad to evaluate meta-RL algorithms' generalization ability to new behaviors.
+Meta-World is an open source benchmark for developing and evaluating multi-task and meta reinforcement learning algorithms for continuous control robotic manipulation environments, with various benchmarks to evaluate different aspects of reinforcement learning algorithms.
 
-For more background information, please refer to our [website](https://meta-world.github.io) and the accompanying [conference publication](https://arxiv.org/abs/1910.10897), which **provides baseline results for 8 state-of-the-art meta- and multi-task RL algorithms**.
-
-__Table of Contents__
-- [Installation](#installation)
-- [Using the benchmark](#using-the-benchmark)
-  * [Basics](#basics)
-  * [Seeding a Benchmark Instance](#seeding-a-benchmark-instance)
-  * [Running ML1, MT1](#running-ml1-or-mt1)
-  * [Running ML10, ML45, MT10, MT50](#running-a-benchmark)
-  * [Accessing Single Goal Environments](#accessing-single-goal-environments)
-- [Citing Meta-World](#citing-meta-world)
-- [Accompanying Baselines](accompanying-baselines)
-- [Become a Contributor](#become-a-contributor)
-- [Acknowledgements](#acknowledgements)
-
-## Join the Community
-
-Metaworld is now maintained by the Farama Foundation! You can interact with our community and the new developers in our [Discord server](https://discord.gg/PfR7a79FpQ)
-
-## Maintenance Status
-The current roadmap for Meta-World can be found [here](https://github.com/Farama-Foundation/Metaworld/issues/409)
+The documentation website is at [metaworld.farama.org](https://metaworld.farama.org), and we have a public discord server (which we also use to coordinate development work) that you can join here: https://discord.gg/bnJ6kubTg6
 
 ## Installation
-To install everything, run:
 
+To install Meta-World, use `pip install metaworld`
 
-```
-pip install git+https://github.com/Farama-Foundation/Metaworld.git@master#egg=metaworld
-```
+We support and test for Python 3.8, 3.9, 3.10, 3.11 on Linux and macOS. We will accept PRs related to Windows, but do not officially support it.
 
-Alternatively, you can clone the repository and install an editable version locally:
+## API
 
-```sh
-git clone https://github.com/Farama-Foundation/Metaworld.git
-cd Metaworld
-pip install -e .
-```
+The Meta-World API follows the [Gymnasium](https://github.com/Farama-Foundation/Gymnasium) API for environment creation and environment interactions.
 
-For users attempting to reproduce results found in the Meta-World paper please use this command:
-```
-pip install git+https://github.com/Farama-Foundation/Metaworld.git@04be337a12305e393c0caf0cbf5ec7755c7c8feb
-```
+To create a benchmark and interact with it:
 
-## Using the benchmark
-Here is a list of benchmark environments for meta-RL (ML*) and multi-task-RL (MT*):
-* [__ML1__](https://meta-world.github.io/figures/ml1.gif) is a meta-RL benchmark environment which tests few-shot adaptation to goal variation within single task. You can choose to test variation within any of [50 tasks](https://meta-world.github.io/figures/ml45-1080p.gif) for this benchmark.
-* [__ML10__](https://meta-world.github.io/figures/ml10.gif) is a meta-RL benchmark which tests few-shot adaptation to new tasks. It comprises 10 meta-train tasks, and 3 test tasks.
-* [__ML45__](https://meta-world.github.io/figures/ml45-1080p.gif) is a meta-RL benchmark which tests few-shot adaptation to new tasks. It comprises 45 meta-train tasks and 5 test tasks.
-* [__MT10__](https://meta-world.github.io/figures/mt10.gif), __MT1__, and __MT50__ are multi-task-RL benchmark environments for learning a multi-task policy that perform 10, 1, and 50 training tasks respectively. __MT1__ is similar to __ML1__ because you can choose to test variation within any of [50 tasks](https://meta-world.github.io/figures/ml45-1080p.gif) for this benchmark.  In the original Meta-World experiments, we augment MT10 and MT50 environment observations with a one-hot vector which identifies the task. We don't enforce how users utilize task one-hot vectors, however one solution would be to use a Gym wrapper such as [this one](https://github.com/rlworkgroup/garage/blob/master/src/garage/envs/multi_env_wrapper.py)
-
-
-### Basics
-We provide a `Benchmark` API, that allows constructing environments following the [`gymnasium.Env`](https://github.com/Farama-Foundation/Gymnasium/blob/main/gymnasium/core.py#L21) interface.
-
-To use a `Benchmark`, first construct it (this samples the tasks allowed for one run of an algorithm on the benchmark).
-Then, construct at least one instance of each environment listed in `benchmark.train_classes` and `benchmark.test_classes`.
-For each of those environments, a task must be assigned to it using
-`env.set_task(task)` from `benchmark.train_tasks` and `benchmark.test_tasks`,
-respectively.
-`Tasks` can only be assigned to environments which have a key in
-`benchmark.train_classes` or `benchmark.test_classes` matching `task.env_name`.
-Please see the sections [Running ML1, MT1](#running-ml1-or-mt1) and [Running ML10, ML45, MT10, MT50](#running-a-benchmark)
-for more details.
-
-You may wish to only access individual environments used in the Metaworld benchmark for your research. See the
-[Accessing Single Goal Environments](#accessing-single-goal-environments) for more details.
-
-
-### Seeding a Benchmark Instance
-For the purposes of reproducibility, it may be important to you to seed your benchmark instance.
-For example, for the ML1 benchmark environment with the 'pick-place-v2' environment, you can do so in the following way:
 ```python
+import gymnasium as gym
 import metaworld
 
-SEED = 0  # some seed number here
-benchmark = metaworld.ML1('pick-place-v2', seed=SEED)
+env = gym.make("Meta-World/reach-V3")
+
+observation, info = env.reset()
+for _ in range(500):
+    action = env.action_space.sample()
+    observation, reward, terminated, truncated, info = env.step(action)
+
+env.close()
 ```
 
-### Running ML1 or MT1
+## Available Benchmarks
+
+### Multi-Task Benchmarks
+The MT1, MT10, and MT50 benchmarks are the Multi-Task Benchmarks. These benchmarks are used to learn a multi-task policy that can learn 1, 10, or 50 training tasks simultaneously. MT1 benchmarks can be created with any of the 50 tasks available in Meta-World.
+In the MT10 and MT50 benchmarks, the observations returned by the benchmark will come with one-hot task IDs appended to the state.
+
+### Meta-Learning Benchmarks
+The ML1, ML10, and ML45 benchmarks are 3 meta-reinforcement learning benchmarks available in Meta-World. The ML1 benchmark can be used with any of the 50 tasks available in Meta-World.
+The ML1 benchmark tests for few-shot adaptation to goal variations within a single task. The ML10 and ML45 both test few-shot adaptation to new tasks. ML10 comprises 10 train tasks with 5 test tasks, while ML45 comprises of 45 training tasks with 5 test tasks.
+
+
+## Creating Multi-Task Benchmarks
+
+### MT1
 ```python
+import gymnasium as gym
 import metaworld
-import random
 
-print(metaworld.ML1.ENV_NAMES)  # Check out the available environments
+seed = 42 # for reproducibility
 
-ml1 = metaworld.ML1('pick-place-v2') # Construct the benchmark, sampling tasks
+env = gym.make('Meta-World/reach-V3', seed=seed) # MT1 with the reach environment
 
-env = ml1.train_classes['pick-place-v2']()  # Create an environment with task `pick_place`
-task = random.choice(ml1.train_tasks)
-env.set_task(task)  # Set task
+obs, info = env.reset()
 
-obs = env.reset()  # Reset environment
-a = env.action_space.sample()  # Sample an action
-obs, reward, done, info = env.step(a)  # Step the environment with the sampled random action
+a = env.action_space.sample() # randomly sample an action
+obs, reward, truncate, terminate, info = env.step(a) # apply the randomly sampled action
 ```
-__MT1__ can be run the same way except that it does not contain any `test_tasks`
-### Running a benchmark
-Create an environment with train tasks (ML10, MT10, ML45, or MT50):
+
+### MT10
+MT10 has two different versions that can be returned by gym.make. The first version is the synchronous version of the benchmark where all environments are contained within the same process.
+For users with limited compute resources, the synchronous option needs the least resources.
 ```python
+import gymnasium as gym
 import metaworld
-import random
 
-ml10 = metaworld.ML10() # Construct the benchmark, sampling tasks
+seed = 42
 
-training_envs = []
-for name, env_cls in ml10.train_classes.items():
-  env = env_cls()
-  task = random.choice([task for task in ml10.train_tasks
-                        if task.env_name == name])
-  env.set_task(task)
-  training_envs.append(env)
+envs = gym.make('Meta-World/MT10-sync', seed=seed) # this returns a Synchronous Vector Environment with 10 environments
 
-for env in training_envs:
-  obs = env.reset()  # Reset environment
-  a = env.action_space.sample()  # Sample an action
-  obs, reward, done, info = env.step(a)  # Step the environment with the sampled random action
+obs, info = envs.reset() # reset all 10 environments
+
+a = env.action_space.sample() # sample an action for each environment
+
+obs, reward, truncate, terminate, info = envs.step(a) # step all 10 environments
 ```
-Create an environment with test tasks (this only works for ML10 and ML45, since MT10 and MT50 don't have a separate set of test tasks):
+Alternatively, for users with more compute we also provide the asynchronous version of the MT10 benchmark where each environment is isolated in it's own process and must use inter-process messaging via pipes to communicate.
+
 ```python
+envs = gym.make('Meta-World/MT10-async', seed=seed) # this returns an Asynchronous Vector Environment with 10 environments
+```
+
+### MT50
+MT50 also contains two different versions, a synchronous and an asynchronous version, of the environments.
+```python
+import gymnasium as gym
 import metaworld
-import random
 
-ml10 = metaworld.ML10() # Construct the benchmark, sampling tasks
+seed = 42
 
-testing_envs = []
-for name, env_cls in ml10.test_classes.items():
-  env = env_cls()
-  task = random.choice([task for task in ml10.test_tasks
-                        if task.env_name == name])
-  env.set_task(task)
-  testing_envs.append(env)
+envs = gym.make('Meta-World/MT50-sync', seed=seed) # this returns a Synchronous Vector Environment with 50 environments
 
-for env in testing_envs:
-  obs = env.reset()  # Reset environment
-  a = env.action_space.sample()  # Sample an action
-  obs, reward, done, info = env.step(a)  # Step the environment with the sampled random action
+obs, info = envs.reset() # reset all 50 environments
+
+a = env.action_space.sample() # sample an action for each environment
+
+obs, reward, truncate, terminate, info = envs.step(a) # step all 50 environments
 ```
 
-## Accessing Single Goal Environments
-You may wish to only access individual environments used in the Meta-World benchmark for your research.
-We provide constructors for creating environments where the goal has been hidden (by zeroing out the goal in
-the observation) and environments where the goal is observable. They are called GoalHidden and GoalObservable
-environments respectively.
-
-You can access them in the following way:
 ```python
-from metaworld.envs import (ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE,
-                            ALL_V2_ENVIRONMENTS_GOAL_HIDDEN)
-                            # these are ordered dicts where the key : value
-                            # is env_name : env_constructor
+envs = gym.make('Meta-World/MT50-async', seed=seed) # this returns an Asynchronous Vector Environment with 50 environments
+```
 
-import numpy as np
 
-door_open_goal_observable_cls = ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE["door-open-v2-goal-observable"]
-door_open_goal_hidden_cls = ALL_V2_ENVIRONMENTS_GOAL_HIDDEN["door-open-v2-goal-hidden"]
+## Meta-Learning Benchmarks
+Each Meta-reinforcement learning benchmark has training and testing environments. These environments must be created separately as follows.
 
-env = door_open_goal_hidden_cls()
-env.reset()  # Reset environment
-a = env.action_space.sample()  # Sample an action
-obs, reward, done, info = env.step(a)  # Step the environment with the sampled random action
-assert (obs[-3:] == np.zeros(3)).all() # goal will be zeroed out because env is HiddenGoal
+### ML1
+```python
+import gymnasium as gym
+import metaworld
 
-# You can choose to initialize the random seed of the environment.
-# The state of your rng will remain unaffected after the environment is constructed.
-env1 = door_open_goal_observable_cls(seed=5)
-env2 = door_open_goal_observable_cls(seed=5)
+seed = 42
 
-env1.reset()  # Reset environment
-env2.reset()
-a1 = env1.action_space.sample()  # Sample an action
-a2 = env2.action_space.sample()
-next_obs1, _, _, _ = env1.step(a1)  # Step the environment with the sampled random action
+train_envs = gym.make('Meta-World/ML1-train-reach-V3', seed=seed)
+test_envs = gym.make('Meta-World/ML1-test-reach-V3', seed=seed)
 
-next_obs2, _, _, _ = env2.step(a2)
-assert (next_obs1[-3:] == next_obs2[-3:]).all() # 2 envs initialized with the same seed will have the same goal
-assert not (next_obs2[-3:] == np.zeros(3)).all()   # The env's are goal observable, meaning the goal is not zero'd out
-
-env3 = door_open_goal_observable_cls(seed=10)  # Construct an environment with a different seed
-env1.reset()  # Reset environment
-env3.reset()
-a1 = env1.action_space.sample()  # Sample an action
-a3 = env3.action_space.sample()
-next_obs1, _, _, _ = env1.step(a1)  # Step the environment with the sampled random action
-next_obs3, _, _, _ = env3.step(a3)
-
-assert not (next_obs1[-3:] == next_obs3[-3:]).all() # 2 envs initialized with different seeds will have different goals
-assert not (next_obs1[-3:] == np.zeros(3)).all()   # The env's are goal observable, meaning the goal is not zero'd out
+# training procedure use train_envs
+# testing procedure use test_envs
 
 ```
 
-## Citing Meta-World
-If you use Meta-World for academic research, please kindly cite our CoRL 2019 paper the using following BibTeX entry.
 
-```
-@inproceedings{yu2019meta,
-  title={Meta-World: A Benchmark and Evaluation for Multi-Task and Meta Reinforcement Learning},
-  author={Tianhe Yu and Deirdre Quillen and Zhanpeng He and Ryan Julian and Karol Hausman and Chelsea Finn and Sergey Levine},
-  booktitle={Conference on Robot Learning (CoRL)},
-  year={2019}
-  eprint={1910.10897},
-  archivePrefix={arXiv},
-  primaryClass={cs.LG}
-  url={https://arxiv.org/abs/1910.10897}
-}
+### ML10
+Similar to the Multi-Task benchmarks, the ML10 and ML45 environments can be run in synchronous or asynchronous modes.
+
+
+```python
+import gymnasium as gym
+import metaworld
+
+train_envs = gym.make('Meta-World/ML10-train-sync', seed=seed) # or ML10-train-async
+test_envs = gym.make('Meta-World/ML10-test-sync', seed=seed) # or ML10-test-async
 ```
 
-## Accompanying Baselines
-If you're looking for implementations of the baselines algorithms used in the Meta-World conference publication, please look at our sister directory, [Garage](https://github.com/rlworkgroup/garage).
 
-Note that these aren't the exact same baselines that were used in the original conference publication, however they are true to the original baselines.
+### ML45
+```python
+import gymnasium as gym
+import metaworld
 
-## Become a Contributor
-We welcome all contributions to Meta-World. Please refer to the [contributor's guide](https://github.com/Farama-Foundation/Metaworld/blob/master/CONTRIBUTING.md) for how to prepare your contributions.
+train_envs = gym.make('Meta-World/ML45-train-sync', seed=seed) # or ML45-train-async
+test_envs = gym.make('Meta-World/ML45-test-sync', seed=seed) # or ML45-test-async
+```
 
-## Acknowledgements
-Meta-World is a work by [Tianhe Yu (Stanford University)](https://cs.stanford.edu/~tianheyu/), [Deirdre Quillen (UC Berkeley)](https://scholar.google.com/citations?user=eDQsOFMAAAAJ&hl=en), [Zhanpeng He (Columbia University)](https://zhanpenghe.github.io), [Ryan Julian (University of Southern California)](https://ryanjulian.me), [Karol Hausman (Google AI)](https://karolhausman.github.io),  [Chelsea Finn (Stanford University)](https://ai.stanford.edu/~cbfinn/) and [Sergey Levine (UC Berkeley)](https://people.eecs.berkeley.edu/~svlevine/).
 
-The code for Meta-World was originally based on [multiworld](https://github.com/vitchyr/multiworld), which is developed by [Vitchyr H. Pong](https://people.eecs.berkeley.edu/~vitchyr/), [Murtaza Dalal](https://github.com/mdalal2020), [Ashvin Nair](http://ashvin.me/), [Shikhar Bahl](https://shikharbahl.github.io), [Steven Lin](https://github.com/stevenlin1111), [Soroush Nasiriany](http://snasiriany.me/), [Kristian Hartikainen](https://hartikainen.github.io/) and [Coline Devin](https://github.com/cdevin). The Meta-World authors are grateful for their efforts on providing such a great framework as a foundation of our work. We also would like to thank Russell Mendonca for his work on reward functions for some of the environments.
+## Custom Benchmarks
+Finally, we also provide support for creating custom benchmarks by combining any number of Meta-World environments.
+
+The prefix 'mt' will return environments that are goal observable for Multi-Task reinforcement learning, while the prefix 'ml' will return environments that are partially observable for Meta-reinforcement learning.
+Like the included MT and ML benchmarks, these environments can also be run in synchronous or asynchronous mode.
+In order to create a custom benchmark, the user must provide a list of environment names with the suffix '-V3'.
+
+```python
+import gymnasium as gym
+import metaworld
+
+envs = gym.make('Meta-World/mt-custom-sync', envs_list=['env_name_1-V3', 'env_name_2-V3', 'env_name_3-V3'], seed=seed)
+```
+
+## Development Roadmap
+
+We have a roadmap for future development work for Gymnasium available here: https://github.com/Farama-Foundation/Metaworld/issues/500

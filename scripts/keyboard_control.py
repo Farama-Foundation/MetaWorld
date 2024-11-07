@@ -10,7 +10,7 @@ import numpy as np
 import pygame  # type: ignore
 from pygame.locals import KEYDOWN, QUIT  # type: ignore
 
-from metaworld.envs.mujoco.sawyer_xyz.v2 import SawyerPickPlaceEnvV2
+from metaworld.envs.V3 import SawyerPickPlaceEnvV3
 
 pygame.init()
 screen = pygame.display.set_mode((400, 300))
@@ -35,7 +35,7 @@ char_to_action = {
 }
 
 
-env = SawyerPickPlaceEnvV2()
+env = SawyerPickPlaceEnvV3()
 env._partially_observable = False
 env._freeze_rand_vec = False
 env._set_task_called = True
