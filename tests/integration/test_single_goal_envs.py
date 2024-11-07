@@ -1,6 +1,6 @@
 import numpy as np
 
-from metaworld.envs import (
+from metaworld.env_dict import (
     ALL_V2_ENVIRONMENTS_GOAL_HIDDEN,
     ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE,
 )

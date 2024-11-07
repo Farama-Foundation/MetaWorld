@@ -20,20 +20,15 @@ Meta-World is an open-source simulated benchmark for meta-reinforcement learning
 **Basic example:**
 
 ```{code-block} python
+import gymnasium as gym
 import metaworld
-import random
 
-print(metaworld.ML1.ENV_NAMES)  # Check out the available environments
+env = gym.make('MetaWorld/reach-v3')
 
-ml1 = metaworld.ML1('pick-place-v2') # Construct the benchmark, sampling tasks
+obs = env.reset()
+a = env.action_space.sample()
+next_obs, reward, terminate, truncate, info = env.step(a)
 
-env = ml1.train_classes['pick-place-v2']()  # Create an environment with task `pick_place`
-task = random.choice(ml1.train_tasks)
-env.set_task(task)  # Set task
-
-obs = env.reset()  # Reset environment
-a = env.action_space.sample()  # Sample an action
-obs, reward, terminate, truncate, info = env.step(a)
 ```
 
 ```{toctree}
@@ -41,11 +36,23 @@ obs, reward, terminate, truncate, info = env.step(a)
 :caption: Introduction
 
 introduction/basic_usage
+evaluation/evaluation
 installation/installation
 rendering/rendering
-usage/basic_usage
 ```
 
+```{toctree}
+:hidden:
+:caption: Benchmark Information
+benchmark/environment_creation
+benchmark/action_space
+benchmark/state_space
+benchmark/benchmark_descriptions
+benchmark/task_descriptions.md
+benchmark/reward_functions
+benchmark/expert_trajectories
+benchmark/resetting
+```
 
 ```{toctree}
 :hidden:

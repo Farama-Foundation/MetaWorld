@@ -2,7 +2,7 @@
 """Test script for profiling average memory footprint."""
 import memory_profiler
 
-from metaworld.envs.mujoco.env_dict import ALL_V2_ENVIRONMENTS
+from metaworld.envs.env_dict import ALL_V2_ENVIRONMENTS
 from tests.helpers import step_env
 
 
