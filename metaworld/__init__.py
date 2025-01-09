@@ -10,8 +10,14 @@ from typing import Any
 import numpy as np
 import numpy.typing as npt
 
-import metaworld.envs.mujoco.env_dict as _env_dict
+import metaworld.env_dict as _env_dict
+from metaworld.env_dict import (
+    ALL_V2_ENVIRONMENTS_GOAL_HIDDEN,
+    ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE,
+)
 from metaworld.types import Task
+
+from .sawyer_xyz_env import SawyerXYZEnv
 
 
 class MetaWorldEnv(abc.ABC):
@@ -285,4 +291,14 @@ class ML45(Benchmark):
         )
 
 
-__all__ = ["ML1", "MT1", "ML10", "MT10", "ML45", "MT50"]
+__all__ = [
+    "ML1",
+    "MT1",
+    "ML10",
+    "MT10",
+    "ML45",
+    "MT50",
+    "ALL_V2_ENVIRONMENTS_GOAL_HIDDEN",
+    "ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE",
+    "SawyerXYZEnv",
+]

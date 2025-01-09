@@ -1,7 +1,7 @@
 import memory_profiler
 import pytest
 
-from metaworld.envs.mujoco.env_dict import ALL_V2_ENVIRONMENTS
+from metaworld.env_dict import ALL_V2_ENVIRONMENTS
 from tests.helpers import step_env
 
 

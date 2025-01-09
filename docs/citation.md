@@ -1,6 +1,6 @@
 # Citation
 
-You can cite Metaworld as follows:
+You can cite Meta-World as follows:
 
 ```bibtex
 @inproceedings{yu2019meta,

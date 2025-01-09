@@ -3,7 +3,7 @@ import random
 import numpy as np
 import pytest
 
-from metaworld.envs import ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE
+from metaworld.env_dict import ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE
 
 
 @pytest.mark.parametrize("env_name", sorted(ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE.keys()))
