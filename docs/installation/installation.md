@@ -2,7 +2,6 @@
 
 To install everything, run:
 
-
 ```
 pip install git+https://github.com/Farama-Foundation/Metaworld.git@master#egg=metaworld
 ```

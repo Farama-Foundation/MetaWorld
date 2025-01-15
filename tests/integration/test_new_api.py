@@ -251,15 +251,15 @@ def check_target_poss_unique(env_instances, env_rand_vecs):
     """Verify that all the state_goals are unique for the different rand_vecs that are sampled.
 
     Note: The following envs randomize object initial position but not state_goal.
-    ['hammer-v2', 'sweep-into-v2', 'bin-picking-v2', 'basketball-v2']
+    ['hammer-v3', 'sweep-into-v3', 'bin-picking-v3', 'basketball-v3']
 
     """
     for env_name, rand_vecs in env_rand_vecs.items():
         if env_name in {
-            "hammer-v2",
-            "sweep-into-v2",
-            "bin-picking-v2",
-            "basketball-v2",
+            "hammer-v3",
+            "sweep-into-v3",
+            "bin-picking-v3",
+            "basketball-v3",
         }:
             continue
         env = env_instances[env_name]
@@ -289,13 +289,13 @@ def test_identical_environments():
             assert not (rand_vec_1 == rand_vec_2).all()
 
     # testing MT1
-    mt1_1 = metaworld.MT1("sweep-into-v2", seed=10)
-    mt1_2 = metaworld.MT1("sweep-into-v2", seed=10)
+    mt1_1 = metaworld.MT1("sweep-into-v3", seed=10)
+    mt1_2 = metaworld.MT1("sweep-into-v3", seed=10)
     helper(mt1_1, mt1_2)
 
     # testing ML1
-    ml1_1 = metaworld.ML1("sweep-into-v2", seed=10)
-    ml1_2 = metaworld.ML1("sweep-into-v2", seed=10)
+    ml1_1 = metaworld.ML1("sweep-into-v3", seed=10)
+    ml1_2 = metaworld.ML1("sweep-into-v3", seed=10)
     helper(ml1_1, ml1_2)
 
     # testing MT10
