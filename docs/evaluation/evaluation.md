@@ -149,11 +149,11 @@ class Timestep(NamedTuple):
 
 ### Utility outputs
 
-The evaluation utilities output multiple items, not just the overall success rate. Specifically, they return a tuple of three items:
-- `mean_success_rate`: the aforementioned success rate. This is a float scalar.
-- `mean_returns`: the returns achieved during evaluation averaged across all goal positions / tasks. This is a float scalar.
+The evaluation utilities output multiple items, not just the overall success rate. Specifically, they return the following outputs:
+- `mean_success_rate`: the aforementioned success rate. This is a float scalar. Each evaluated goal / episode has equal weight; this is not an unweighted average of `success_rate_per_task` when tasks have different numbers of environments.
+- `mean_returns`: the returns achieved during evaluation averaged across all goal positions / tasks, with the same episode weighting as `mean_success_rate`. This is a float scalar.
 - `success_rate_per_task`: the success rate achieved for each task evaluated. This is a dictionary keyed by the task name as a string and a float scalar as a value. This scalar is the success rate averaged across goal positions for the given task.
-- `returns_per_task`: the returns achieved for each task evaluated. This is a dictionary keyed by the task name as a string and a float scalar as a value. This scalar is the returns averaged across goal positions for the given task.
+- `episodic_returns` (from `evaluation` only): a dictionary keyed by task name, containing a list of episode returns. Each environment contributes its first `num_episodes` returns, grouped in environment order and then episode order. A task with `k` environments therefore has `k * num_episodes` entries. `metalearning_evaluation` returns only the first three outputs above.
 
 ### Other assumptions
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+from contextlib import closing
 
 import gymnasium as gym
 import numpy as np
@@ -150,3 +151,173 @@ def test_metalearning_evaluation(benchmark):
         agent.step_calls
         == num_evals * adaptation_steps * adaptation_episodes * max_episode_steps
     )
+
+
+class _FixedOutcomeEnv(gym.Env):
+    """Toy env: succeeds at its first step, or never succeeds and truncates at `horizon`."""
+
+    observation_space = gym.spaces.Box(-1.0, 1.0, (3,))
+    action_space = gym.spaces.Box(-1.0, 1.0, (4,))
+
+    def __init__(self, succeeds: bool, task_name: str, horizon: int = 5):
+        self.succeeds = succeeds
+        self.task_name = task_name
+        self.horizon = horizon
+        self.terminate_on_success = False
+        self.t = 0
+
+    def toggle_terminate_on_success(self, on: bool):
+        self.terminate_on_success = on
+
+    def reset(self, *, seed=None, options=None):
+        super().reset(seed=seed)
+        self.t = 0
+        return np.zeros(3, np.float32), {}
+
+    def step(self, action):
+        self.t += 1
+        terminated = self.succeeds and self.terminate_on_success
+        truncated = (not terminated) and self.t >= self.horizon
+        info = {"success": float(self.succeeds)}
+        return np.zeros(3, np.float32), 0.0, terminated, truncated, info
+
+
+class _ZeroAgent:
+    def eval_action(self, observations):
+        return np.zeros((observations.shape[0], 4))
+
+    def reset(self, env_mask):
+        pass
+
+
+def _fixed_outcome_envs(outcomes, task_names):
+    return gym.vector.SyncVectorEnv(
+        [
+            lambda s=s, n=n: gym.wrappers.RecordEpisodeStatistics(
+                _FixedOutcomeEnv(s, n)
+            )
+            for s, n in zip(outcomes, task_names)
+        ],
+        autoreset_mode=gym.vector.AutoresetMode.SAME_STEP,
+    )
+
+
+def test_evaluation_counts_episodes_per_env():
+    # Four envs (goals) of one task, as in ML1: one succeeds immediately, three
+    # never do. Each env must contribute its own first `num_episodes` episodes
+    # -> 1/4, not the first episodes to finish for the task (which would all be
+    # the fast successes -> 1.0).
+    envs = _fixed_outcome_envs([True, False, False, False], ["SawyerReachEnvV3"] * 4)
+    (
+        mean_success_rate,
+        _,
+        success_rate_per_task,
+        episodic_returns,
+    ) = evaluation.evaluation(_ZeroAgent(), envs, num_episodes=3)
+    assert mean_success_rate == pytest.approx(0.25)
+    assert success_rate_per_task == {"reach-v3": pytest.approx(0.25)}
+    assert len(episodic_returns["reach-v3"]) == 3 * 4
+
+
+def test_evaluation_one_env_per_task_unchanged():
+    # With one env per task name (the multi-task benchmarks) per-env and per-task
+    # counting agree.
+    envs = _fixed_outcome_envs([True, False], ["SawyerReachEnvV3", "SawyerPushEnvV3"])
+    (
+        mean_success_rate,
+        _,
+        success_rate_per_task,
+        episodic_returns,
+    ) = evaluation.evaluation(_ZeroAgent(), envs, num_episodes=3)
+    assert success_rate_per_task == {
+        "reach-v3": pytest.approx(1.0),
+        "push-v3": pytest.approx(0.0),
+    }
+    assert mean_success_rate == pytest.approx(0.5)
+    assert all(len(r) == 3 for r in episodic_returns.values())
+
+
+class _ScheduledOutcomeEnv(_FixedOutcomeEnv):
+    """Repeat (length, success, return) episodes, including after scoring stops."""
+
+    def __init__(self, task_name, episodes):
+        super().__init__(False, task_name)
+        self.episodes = episodes
+        self.episode_index = -1
+        self.ends = []
+
+    def reset(self, *, seed=None, options=None):
+        self.episode_index += 1
+        return super().reset(seed=seed, options=options)
+
+    def step(self, action):
+        self.t += 1
+        length, success, episode_return = self.episodes[
+            self.episode_index % len(self.episodes)
+        ]
+        ended = self.t >= length
+        terminated = ended and success and self.terminate_on_success
+        # Success and time limit may occur on the same transition.
+        truncated = ended and (not success or length == 3)
+        if terminated or truncated:
+            self.ends.append((terminated, truncated))
+        return (
+            np.zeros(3, np.float32),
+            episode_return if ended else 0.0,
+            terminated,
+            truncated,
+            {"success": float(ended and success)},
+        )
+
+
+def _scheduled_envs(specs):
+    return gym.vector.SyncVectorEnv(
+        [
+            lambda name=name, episodes=episodes: gym.wrappers.RecordEpisodeStatistics(
+                _ScheduledOutcomeEnv(name, episodes)
+            )
+            for name, episodes in specs
+        ],
+        autoreset_mode=gym.vector.AutoresetMode.SAME_STEP,
+    )
+
+
+def test_evaluation_unequal_goal_counts():
+    # The documented denominator is num_episodes * num_envs, not task count.
+    specs = [("SawyerReachEnvV3", [(1, True, 1.0)])] * 4 + [
+        ("SawyerPushEnvV3", [(4, False, 0.0)])
+    ]
+    with closing(_scheduled_envs(specs)) as envs:
+        success, returns, per_task, episodes = evaluation.evaluation(
+            _ZeroAgent(), envs, num_episodes=2
+        )
+    assert per_task == {"reach-v3": 1.0, "push-v3": 0.0}
+    assert episodes == {"reach-v3": [1.0] * 8, "push-v3": [0.0] * 2}
+    assert returns == pytest.approx(0.8)
+    assert success == pytest.approx(0.8)
+
+
+@pytest.mark.parametrize("shared_task", [False, True])
+def test_evaluation_mixed_episode_endings_and_returns(shared_task):
+    second_task = "SawyerReachEnvV3" if shared_task else "SawyerPushEnvV3"
+    specs = [
+        ("SawyerReachEnvV3", [(1, True, 2.0), (2, False, -3.0), (1, True, 99.0)]),
+        (second_task, [(3, True, 7.0), (4, False, 11.0)]),
+    ]
+    with closing(_scheduled_envs(specs)) as envs:
+        result = evaluation.evaluation(_ZeroAgent(), envs, num_episodes=2)
+        # The fast env continues running; none of its later 99 returns count.
+        assert len(envs.envs[0].unwrapped.ends) > 2
+        assert envs.envs[1].unwrapped.ends == [(True, True), (False, True)]
+        assert envs.get_attr("terminate_on_success") == (False, False)
+    success, returns, per_task, episodes = result
+    expected = (
+        {"reach-v3": [2.0, -3.0, 7.0, 11.0]}
+        if shared_task
+        else {"reach-v3": [2.0, -3.0], "push-v3": [7.0, 11.0]}
+    )
+    assert episodes == expected
+    assert all(isinstance(r, float) for values in episodes.values() for r in values)
+    assert per_task == {task: 0.5 for task in expected}
+    assert success == pytest.approx(0.5)
+    assert returns == pytest.approx(4.25)

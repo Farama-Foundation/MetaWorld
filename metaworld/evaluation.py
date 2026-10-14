@@ -58,15 +58,15 @@ def evaluation(
     agent.reset(np.ones(eval_envs.num_envs, dtype=np.bool_))
 
     task_names = _get_task_names(eval_envs)
-    successes = {task_name: 0 for task_name in set(task_names)}
-    episodic_returns: dict[str, list[float]] = {
-        task_name: [] for task_name in set(task_names)
-    }
+    # Count the first `num_episodes` episodes of EACH env (i.e. of each goal), not
+    # the first `num_episodes` episodes to finish per task name. Several envs share
+    # a task name in the meta-learning benchmarks (all of them in ML1), and with
+    # terminate_on_success the successful episodes finish first, so counting in
+    # completion order per task name biases the scored subset toward successes.
+    env_successes = np.zeros(eval_envs.num_envs, dtype=np.float64)
+    env_returns: list[list[float]] = [[] for _ in range(eval_envs.num_envs)]
 
-    def eval_done(returns):
-        return all(len(r) >= num_episodes for _, r in returns.items())
-
-    while not eval_done(episodic_returns):
+    while not all(len(r) >= num_episodes for r in env_returns):
         actions = agent.eval_action(obs)
         obs, _, terminations, truncations, infos = eval_envs.step(actions)
 
@@ -74,24 +74,35 @@ def evaluation(
         agent.reset(dones)
 
         for i, env_ended in enumerate(dones):
-            if env_ended:
-                episodic_returns[task_names[i]].append(
-                    float(infos["final_info"]["episode"]["r"][i])
-                )
-                if len(episodic_returns[task_names[i]]) <= num_episodes:
-                    successes[task_names[i]] += int(infos["final_info"]["success"][i])
+            if env_ended and len(env_returns[i]) < num_episodes:
+                env_returns[i].append(float(infos["final_info"]["episode"]["r"][i]))
+                env_successes[i] += int(infos["final_info"]["success"][i])
 
-    episodic_returns = {
-        task_name: returns[:num_episodes]
-        for task_name, returns in episodic_returns.items()
+    episodic_returns: dict[str, list[float]] = {
+        task_name: [
+            ret
+            for i, name in enumerate(task_names)
+            if name == task_name
+            for ret in env_returns[i]
+        ]
+        for task_name in set(task_names)
     }
-
     success_rate_per_task = {
-        task_name: task_successes / num_episodes
-        for task_name, task_successes in successes.items()
+        task_name: float(
+            np.mean(
+                [
+                    env_successes[i] / num_episodes
+                    for i, name in enumerate(task_names)
+                    if name == task_name
+                ]
+            )
+        )
+        for task_name in set(task_names)
     }
-    mean_success_rate = np.mean(list(success_rate_per_task.values()))
-    mean_returns = np.mean(list(episodic_returns.values()))
+    # Each scored goal/episode has equal weight, as in the documented
+    # num_episodes * num_envs denominator, even with unequal envs per task.
+    mean_success_rate = np.mean(env_successes / num_episodes)
+    mean_returns = np.mean(np.concatenate(list(episodic_returns.values())))
 
     eval_envs.call("toggle_terminate_on_success", terminate_on_success)
 
