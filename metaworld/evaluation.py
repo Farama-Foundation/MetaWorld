@@ -99,7 +99,9 @@ def evaluation(
         )
         for task_name in set(task_names)
     }
-    mean_success_rate = np.mean(list(success_rate_per_task.values()))
+    # Each scored goal/episode has equal weight, as in the documented
+    # num_episodes * num_envs denominator, even with unequal envs per task.
+    mean_success_rate = np.mean(env_successes / num_episodes)
     mean_returns = np.mean(np.concatenate(list(episodic_returns.values())))
 
     eval_envs.call("toggle_terminate_on_success", terminate_on_success)

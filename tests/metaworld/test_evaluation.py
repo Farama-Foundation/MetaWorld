@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+from contextlib import closing
 
 import gymnasium as gym
 import numpy as np
@@ -234,3 +235,89 @@ def test_evaluation_one_env_per_task_unchanged():
     }
     assert mean_success_rate == pytest.approx(0.5)
     assert all(len(r) == 3 for r in episodic_returns.values())
+
+
+class _ScheduledOutcomeEnv(_FixedOutcomeEnv):
+    """Repeat (length, success, return) episodes, including after scoring stops."""
+
+    def __init__(self, task_name, episodes):
+        super().__init__(False, task_name)
+        self.episodes = episodes
+        self.episode_index = -1
+        self.ends = []
+
+    def reset(self, *, seed=None, options=None):
+        self.episode_index += 1
+        return super().reset(seed=seed, options=options)
+
+    def step(self, action):
+        self.t += 1
+        length, success, episode_return = self.episodes[
+            self.episode_index % len(self.episodes)
+        ]
+        ended = self.t >= length
+        terminated = ended and success and self.terminate_on_success
+        # Success and time limit may occur on the same transition.
+        truncated = ended and (not success or length == 3)
+        if terminated or truncated:
+            self.ends.append((terminated, truncated))
+        return (
+            np.zeros(3, np.float32),
+            episode_return if ended else 0.0,
+            terminated,
+            truncated,
+            {"success": float(ended and success)},
+        )
+
+
+def _scheduled_envs(specs):
+    return gym.vector.SyncVectorEnv(
+        [
+            lambda name=name, episodes=episodes: gym.wrappers.RecordEpisodeStatistics(
+                _ScheduledOutcomeEnv(name, episodes)
+            )
+            for name, episodes in specs
+        ],
+        autoreset_mode=gym.vector.AutoresetMode.SAME_STEP,
+    )
+
+
+def test_evaluation_unequal_goal_counts():
+    # The documented denominator is num_episodes * num_envs, not task count.
+    specs = [("SawyerReachEnvV3", [(1, True, 1.0)])] * 4 + [
+        ("SawyerPushEnvV3", [(4, False, 0.0)])
+    ]
+    with closing(_scheduled_envs(specs)) as envs:
+        success, returns, per_task, episodes = evaluation.evaluation(
+            _ZeroAgent(), envs, num_episodes=2
+        )
+    assert per_task == {"reach-v3": 1.0, "push-v3": 0.0}
+    assert episodes == {"reach-v3": [1.0] * 8, "push-v3": [0.0] * 2}
+    assert returns == pytest.approx(0.8)
+    assert success == pytest.approx(0.8)
+
+
+@pytest.mark.parametrize("shared_task", [False, True])
+def test_evaluation_mixed_episode_endings_and_returns(shared_task):
+    second_task = "SawyerReachEnvV3" if shared_task else "SawyerPushEnvV3"
+    specs = [
+        ("SawyerReachEnvV3", [(1, True, 2.0), (2, False, -3.0), (1, True, 99.0)]),
+        (second_task, [(3, True, 7.0), (4, False, 11.0)]),
+    ]
+    with closing(_scheduled_envs(specs)) as envs:
+        result = evaluation.evaluation(_ZeroAgent(), envs, num_episodes=2)
+        # The fast env continues running; none of its later 99 returns count.
+        assert len(envs.envs[0].unwrapped.ends) > 2
+        assert envs.envs[1].unwrapped.ends == [(True, True), (False, True)]
+        assert envs.get_attr("terminate_on_success") == (False, False)
+    success, returns, per_task, episodes = result
+    expected = (
+        {"reach-v3": [2.0, -3.0, 7.0, 11.0]}
+        if shared_task
+        else {"reach-v3": [2.0, -3.0], "push-v3": [7.0, 11.0]}
+    )
+    assert episodes == expected
+    assert all(isinstance(r, float) for values in episodes.values() for r in values)
+    assert per_task == {task: 0.5 for task in expected}
+    assert success == pytest.approx(0.5)
+    assert returns == pytest.approx(4.25)
